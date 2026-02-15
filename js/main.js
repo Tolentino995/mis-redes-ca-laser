@@ -7,7 +7,7 @@
 const CONFIG = {
   instagram: {
     username: 'c.a.laser_estudio',
-    appTimeout: 1000, // Tiempo de espera antes de abrir en navegador
+    appTimeout: 1500, // Tiempo de espera antes de abrir en navegador
   },
   analytics: {
     enabled: false, // Cambiar a true si usas Google Analytics
@@ -35,41 +35,107 @@ function initApp() {
 }
 
 // === MANEJO DE INSTAGRAM (Compatible con Samsung y todos los dispositivos) ===
+
+// Función específica para Android con mejor compatibilidad
+function openInstagramAndroid(event, username) {
+  event.preventDefault();
+  
+  const isAndroid = /Android/i.test(navigator.userAgent);
+  const webUrl = `https://www.instagram.com/${username}/`;
+  
+  if (isAndroid) {
+    // Método 1: Intent URL (el más confiable para Android)
+    const intentUrl = `intent://instagram.com/_u/${username}/#Intent;package=com.instagram.android;scheme=https;end`;
+    
+    try {
+      // Intentar abrir con intent
+      window.location.href = intentUrl;
+      
+      // Si no funciona en 2 segundos, abrir en navegador
+      setTimeout(function() {
+        if (!document.hidden) {
+          window.open(webUrl, '_blank', 'noopener,noreferrer');
+        }
+      }, 2000);
+    } catch (e) {
+      // Si falla, abrir en navegador directamente
+      window.open(webUrl, '_blank', 'noopener,noreferrer');
+    }
+  } else {
+    // Para iOS y Desktop
+    const deepLink = `instagram://user?username=${username}`;
+    window.location.href = deepLink;
+    
+    setTimeout(function() {
+      if (!document.hidden) {
+        window.open(webUrl, '_blank', 'noopener,noreferrer');
+      }
+    }, 1500);
+  }
+  
+  return false;
+}
+
 function openInstagram(event) {
   event.preventDefault();
   
   const username = CONFIG.instagram.username;
-  const deepLink = `instagram://user?username=${username}`;
   const webUrl = `https://www.instagram.com/${username}/`;
   
-  // Detectar si es un dispositivo móvil
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  // Detectar plataforma
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const isAndroid = /Android/i.test(navigator.userAgent);
   const isSamsung = /SamsungBrowser/i.test(navigator.userAgent);
   
-  if (isMobile) {
-    // Intentar abrir la app de Instagram
+  // Para iOS
+  if (isIOS) {
+    const deepLink = `instagram://user?username=${username}`;
     window.location.href = deepLink;
     
-    // Fallback: Si no se abre la app en X segundos, abrir en navegador
-    const timeout = setTimeout(function() {
-      window.open(webUrl, '_blank', 'noopener,noreferrer');
-    }, CONFIG.instagram.appTimeout);
+    // Fallback después de 2 segundos
+    setTimeout(function() {
+      if (!document.hidden) {
+        window.location.href = webUrl;
+      }
+    }, 2000);
+  }
+  // Para Android (incluyendo Samsung)
+  else if (isAndroid) {
+    // Intentar diferentes métodos
+    const methods = [
+      `instagram://user?username=${username}`,
+      `intent://instagram.com/_u/${username}/#Intent;package=com.instagram.android;scheme=https;end`,
+      webUrl
+    ];
     
-    // Limpiar timeout si la app se abre correctamente
-    window.addEventListener('blur', function() {
-      clearTimeout(timeout);
-    }, { once: true });
+    let currentMethod = 0;
     
-    // Para Samsung específicamente
-    if (isSamsung) {
-      setTimeout(function() {
-        if (document.hidden || document.webkitHidden) {
-          clearTimeout(timeout);
+    function tryNextMethod() {
+      if (currentMethod < methods.length - 1) {
+        try {
+          window.location.href = methods[currentMethod];
+          currentMethod++;
+          
+          // Si no funciona en 1.5 segundos, probar siguiente método
+          setTimeout(function() {
+            if (!document.hidden && currentMethod < methods.length) {
+              tryNextMethod();
+            }
+          }, 1500);
+        } catch (e) {
+          currentMethod++;
+          tryNextMethod();
         }
-      }, 500);
+      } else {
+        // Último recurso: abrir en navegador
+        window.open(webUrl, '_blank', 'noopener,noreferrer');
+      }
     }
-  } else {
-    // En desktop, abrir directamente en navegador
+    
+    tryNextMethod();
+  }
+  // Para Desktop
+  else {
     window.open(webUrl, '_blank', 'noopener,noreferrer');
   }
   
