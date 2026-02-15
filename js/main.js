@@ -3,17 +3,6 @@
    Funcionalidades y optimizaciones
    ============================================ */
 
-// === CONFIGURACIÓN ===
-const CONFIG = {
-  instagram: {
-    username: 'c.a.laser_estudio',
-    appTimeout: 1500, // Tiempo de espera antes de abrir en navegador
-  },
-  analytics: {
-    enabled: false, // Cambiar a true si usas Google Analytics
-  }
-};
-
 // === INICIALIZACIÓN ===
 document.addEventListener('DOMContentLoaded', function() {
   initApp();
@@ -32,115 +21,6 @@ function initApp() {
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     console.log('✨ C&A Laser Studio - Website iniciado correctamente');
   }
-}
-
-// === MANEJO DE INSTAGRAM (Compatible con Samsung y todos los dispositivos) ===
-
-// Función específica para Android con mejor compatibilidad
-function openInstagramAndroid(event, username) {
-  event.preventDefault();
-  
-  const isAndroid = /Android/i.test(navigator.userAgent);
-  const webUrl = `https://www.instagram.com/${username}/`;
-  
-  if (isAndroid) {
-    // Método 1: Intent URL (el más confiable para Android)
-    const intentUrl = `intent://instagram.com/_u/${username}/#Intent;package=com.instagram.android;scheme=https;end`;
-    
-    try {
-      // Intentar abrir con intent
-      window.location.href = intentUrl;
-      
-      // Si no funciona en 2 segundos, abrir en navegador
-      setTimeout(function() {
-        if (!document.hidden) {
-          window.open(webUrl, '_blank', 'noopener,noreferrer');
-        }
-      }, 2000);
-    } catch (e) {
-      // Si falla, abrir en navegador directamente
-      window.open(webUrl, '_blank', 'noopener,noreferrer');
-    }
-  } else {
-    // Para iOS y Desktop
-    const deepLink = `instagram://user?username=${username}`;
-    window.location.href = deepLink;
-    
-    setTimeout(function() {
-      if (!document.hidden) {
-        window.open(webUrl, '_blank', 'noopener,noreferrer');
-      }
-    }, 1500);
-  }
-  
-  return false;
-}
-
-function openInstagram(event) {
-  event.preventDefault();
-  
-  const username = CONFIG.instagram.username;
-  const webUrl = `https://www.instagram.com/${username}/`;
-  
-  // Detectar plataforma
-  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const isAndroid = /Android/i.test(navigator.userAgent);
-  const isSamsung = /SamsungBrowser/i.test(navigator.userAgent);
-  
-  // Para iOS
-  if (isIOS) {
-    const deepLink = `instagram://user?username=${username}`;
-    window.location.href = deepLink;
-    
-    // Fallback después de 2 segundos
-    setTimeout(function() {
-      if (!document.hidden) {
-        window.location.href = webUrl;
-      }
-    }, 2000);
-  }
-  // Para Android (incluyendo Samsung)
-  else if (isAndroid) {
-    // Intentar diferentes métodos
-    const methods = [
-      `instagram://user?username=${username}`,
-      `intent://instagram.com/_u/${username}/#Intent;package=com.instagram.android;scheme=https;end`,
-      webUrl
-    ];
-    
-    let currentMethod = 0;
-    
-    function tryNextMethod() {
-      if (currentMethod < methods.length - 1) {
-        try {
-          window.location.href = methods[currentMethod];
-          currentMethod++;
-          
-          // Si no funciona en 1.5 segundos, probar siguiente método
-          setTimeout(function() {
-            if (!document.hidden && currentMethod < methods.length) {
-              tryNextMethod();
-            }
-          }, 1500);
-        } catch (e) {
-          currentMethod++;
-          tryNextMethod();
-        }
-      } else {
-        // Último recurso: abrir en navegador
-        window.open(webUrl, '_blank', 'noopener,noreferrer');
-      }
-    }
-    
-    tryNextMethod();
-  }
-  // Para Desktop
-  else {
-    window.open(webUrl, '_blank', 'noopener,noreferrer');
-  }
-  
-  // Tracking (si está habilitado)
-  trackEvent('Social Link Click', 'Instagram');
 }
 
 // === LAZY LOADING PARA IMÁGENES ===
@@ -200,15 +80,15 @@ function trackExternalLinks() {
 
 // === FUNCIÓN DE TRACKING GENÉRICA ===
 function trackEvent(category, action, label = '') {
-  // Google Analytics
-  if (CONFIG.analytics.enabled && typeof gtag !== 'undefined') {
+  // Google Analytics (si lo tienes configurado)
+  if (typeof gtag !== 'undefined') {
     gtag('event', action, {
       'event_category': category,
       'event_label': label
     });
   }
   
-  // Facebook Pixel
+  // Facebook Pixel (si lo tienes configurado)
   if (typeof fbq !== 'undefined') {
     fbq('track', action);
   }
@@ -324,17 +204,8 @@ if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
   document.body.classList.add('reduced-motion');
 }
 
-// === SERVICE WORKER (opcional, para PWA) ===
-if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
-  // Descomentar si decides implementar un service worker
-  // navigator.serviceWorker.register('/sw.js')
-  //   .then(reg => console.log('Service Worker registrado', reg))
-  //   .catch(err => console.log('Error al registrar Service Worker', err));
-}
-
 // === EXPORTAR FUNCIONES PARA USO GLOBAL ===
 window.CALaserStudio = {
-  openInstagram,
   copyToClipboard,
   smoothScrollTo,
   trackEvent
